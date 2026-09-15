@@ -39,7 +39,7 @@ docker compose up -d
 
 ## Consumo
 
-- **Backend/Postman (consumo de la API de secretos)**: `http://<DOMAIN>`, enrutado públicamente por Traefik usando la IP pública del VPS (`62.238.26.202`) vía sslip.io. El Traefik del VPS solo expone el entrypoint `web` (puerto 80, sin TLS); no hay `certresolver` configurado, por lo que el tráfico es HTTP plano hasta que se decida agregar TLS.
+- **Backend/Postman (consumo de la API de secretos)**: `https://<DOMAIN>`, enrutado públicamente por Traefik usando la IP pública del VPS (`62.238.26.202`) vía sslip.io. Traefik del VPS ahora expone `websecure` (443) con certificado Let's Encrypt (HTTP challenge, resolver `letsencrypt`, email `ingmpt@gmail.com`).
 - **Administración (UI)**: **no** se expone por Traefik ni por el dominio público. El puerto interno del backend (`8080`) solo se publica en `127.0.0.1:9080` del host del VPS (puerto `8080` ya está tomado localmente por el dashboard de Traefik; ver `ports` en [docker-compose.yml](docker-compose.yml)). El acceso se hace exclusivamente mediante túnel SSH desde el equipo local:
 
   ```powershell
