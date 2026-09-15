@@ -1,0 +1,70 @@
+networks:
+  traefik-public:
+    external: true
+  infisical-internal:
+    driver: bridge
+
+volumes:
+  pg_data:
+  redis_data:
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - infisical-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - infisical-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: infisical/infisical:latest-postgres
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      AUTH_SECRET: ${AUTH_SECRET}
+      SITE_URL: ${SITE_URL}
+      DB_CONNECTION_URI: ${DB_CONNECTION_URI}
+      REDIS_URL: ${REDIS_URL}
+      HOST: "0.0.0.0"
+    ports:
+      # Admin UI: solo accesible localmente en el host vía túnel SSH (plink -L 9090:localhost:${ADMIN_HOST_PORT}), nunca público
+      - "127.0.0.1:${ADMIN_HOST_PORT}:${BACKEND_INTERNAL_PORT}"
+    networks:
+      - traefik-public
+      - infisical-internal
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "traefik-public"
+      traefik.http.routers.trust-infisical.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.trust-infisical.entrypoints: "websecure"
+      traefik.http.routers.trust-infisical.tls: "true"
+      traefik.http.routers.trust-infisical.tls.certresolver: "letsencrypt"
+      traefik.http.services.trust-infisical.loadbalancer.server.port: "${BACKEND_INTERNAL_PORT}"

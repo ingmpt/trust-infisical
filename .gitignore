@@ -1,0 +1,22 @@
+# Secrets y configuración local - NUNCA versionar
+.env
+.env.*
+!.env.example
+
+# Volúmenes / datos persistentes locales (si se montan como bind mounts)
+pg_data/
+redis_data/
+backups/
+
+# Archivos sensibles varios
+*.pem
+*.key
+*.crt
+*.pdf
+*.log
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
