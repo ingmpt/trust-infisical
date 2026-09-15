@@ -64,7 +64,5 @@ services:
       traefik.enable: "true"
       traefik.docker.network: "traefik-public"
       traefik.http.routers.trust-infisical.rule: "Host(`${DOMAIN}`)"
-      traefik.http.routers.trust-infisical.entrypoints: "websecure"
-      traefik.http.routers.trust-infisical.tls: "true"
-      traefik.http.routers.trust-infisical.tls.certresolver: "letsencrypt"
+      traefik.http.routers.trust-infisical.entrypoints: "web"
       traefik.http.services.trust-infisical.loadbalancer.server.port: "${BACKEND_INTERNAL_PORT}"
