@@ -48,6 +48,22 @@ docker compose up -d
 - Si tu IP pública cambia (conexión dinámica), actualizar `ADMIN_ALLOWED_IPS` en el `.env` del VPS y ejecutar `docker compose up -d --force-recreate backend` para aplicarlo.
 - El puerto de respaldo `127.0.0.1:${ADMIN_HOST_PORT}` sigue disponible como acceso alterno vía túnel SSH directo al contenedor, pero ya no es necesario para el flujo normal de administración (el allowlist de IP en el dominio público lo reemplaza).
 
+## Respaldo de administración vía túnel SSH (si tu IP cambia)
+
+El túnel debe apuntar al puerto **443 de Traefik** (no directo al contenedor), para que el certificado TLS y las cookies de sesión coincidan con `SITE_URL`. El tráfico tunelizado llega a Traefik como `127.0.0.1`, que está incluido en `ADMIN_ALLOWED_IPS`.
+
+1. En el equipo local, agregar al archivo hosts (`C:\Windows\System32\drivers\etc\hosts`, como administrador):
+   ```
+   127.0.0.1  infisical.62-238-26-202.sslip.io
+   ```
+2. Abrir el túnel apuntando al puerto 443 del propio VPS:
+   ```powershell
+   plink -N -L 443:localhost:443 -i "D:\Bots\Hetzner\key\Trust Technical\private-key.ppk" root@62.238.26.202
+   ```
+   (requiere ejecutar PowerShell como administrador porque el puerto 443 es privilegiado en Windows; alternativamente usar un puerto local alto como `8443:localhost:443` y navegar a `https://infisical.62-238-26-202.sslip.io:8443/`).
+3. Navegar a `https://infisical.62-238-26-202.sslip.io/` (o con el puerto alterno) — el certificado será válido porque el SNI/Host coincide con el dominio real.
+4. Al terminar, quitar la línea del archivo hosts para volver a resolver el dominio normalmente por DNS público.
+
 ## Despliegue en el VPS (flujo git)
 
 1. En local: commitear y `git push origin main`.
