@@ -39,20 +39,14 @@ docker compose up -d
 
 ## Consumo
 
-- **Backend/Postman (consumo de la API de secretos)**: `https://<DOMAIN>`, enrutado públicamente por Traefik usando la IP pública del VPS (`62.238.26.202`) vía sslip.io. Traefik del VPS ahora expone `websecure` (443) con certificado Let's Encrypt (HTTP challenge, resolver `letsencrypt`, email `ingmpt@gmail.com`).
-- **Administración (UI)**: **no** se expone por Traefik ni por el dominio público. El puerto interno del backend (`8080`) solo se publica en `127.0.0.1:9080` del host del VPS (puerto `8080` ya está tomado localmente por el dashboard de Traefik; ver `ports` en [docker-compose.yml](docker-compose.yml)). El acceso se hace exclusivamente mediante túnel SSH desde el equipo local:
-
-  ```powershell
-  plink -N -L 9090:localhost:9080 -i "D:\...\key\server-private_key.ppk" root@62.238.26.202
-  ```
-
-  Luego abrir `http://localhost:9090` en el navegador local para administrar la instancia.
+- **Backend/Postman (consumo de la API de secretos)**: `https://<DOMAIN>/api/*`, enrutado públicamente por Traefik (router `trust-infisical-api`, sin restricción de IP) usando la IP pública del VPS (`62.238.26.202`) vía sslip.io. Traefik del VPS expone `websecure` (443) con certificado Let's Encrypt (HTTP challenge, resolver `letsencrypt`, email `ingmpt@gmail.com`).
+- **Administración (UI: login, dashboard, `/admin/*`)**: mismo dominio público, pero **restringida por IP allowlist** (router `trust-infisical-admin`, middleware `ipallowlist`). Solo las IPs listadas en `ADMIN_ALLOWED_IPS` (formato CIDR, separadas por coma) pueden acceder; cualquier otra IP recibe rechazo a nivel de Traefik antes de llegar al backend.
 - Ninguna aplicación externa debe apuntar directamente a los puertos de `db`/`redis`; estos permanecen únicamente en la red interna `infisical-internal`.
 
 ## Pendiente / a confirmar con el humano
 
-- Confirmar que el firewall del VPS bloquea el puerto `8080` a nivel público (el binding `127.0.0.1:8080` ya evita exposición externa, pero se recomienda reforzarlo con reglas de firewall).
-- Pruebas locales: pendientes hasta confirmar que las variables de entorno están listas (Fase 3).
+- Si tu IP pública cambia (conexión dinámica), actualizar `ADMIN_ALLOWED_IPS` en el `.env` del VPS y ejecutar `docker compose up -d --force-recreate backend` para aplicarlo.
+- El puerto de respaldo `127.0.0.1:${ADMIN_HOST_PORT}` sigue disponible como acceso alterno vía túnel SSH directo al contenedor, pero ya no es necesario para el flujo normal de administración (el allowlist de IP en el dominio público lo reemplaza).
 
 ## Despliegue en el VPS (flujo git)
 

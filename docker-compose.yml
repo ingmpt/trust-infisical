@@ -55,7 +55,7 @@ services:
       REDIS_URL: ${REDIS_URL}
       HOST: "0.0.0.0"
     ports:
-      # Admin UI: solo accesible localmente en el host vía túnel SSH (plink -L 9090:localhost:${ADMIN_HOST_PORT}), nunca público
+      # Puerto de respaldo local (no requerido para administrar; el admin ahora entra por el dominio público filtrado por IP)
       - "127.0.0.1:${ADMIN_HOST_PORT}:${BACKEND_INTERNAL_PORT}"
     networks:
       - traefik-public
@@ -63,8 +63,19 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: "traefik-public"
-      traefik.http.routers.trust-infisical.rule: "Host(`${DOMAIN}`)"
-      traefik.http.routers.trust-infisical.entrypoints: "websecure"
-      traefik.http.routers.trust-infisical.tls: "true"
-      traefik.http.routers.trust-infisical.tls.certresolver: "letsencrypt"
+      # Middleware: allowlist de IPs para todo lo que NO sea /api (login, dashboard, /admin/*)
+      traefik.http.middlewares.trust-infisical-admin-allowlist.ipallowlist.sourcerange: "${ADMIN_ALLOWED_IPS}"
+      # Router API: público, sin restricción de IP, para Postman/backends
+      traefik.http.routers.trust-infisical-api.rule: "Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.trust-infisical-api.entrypoints: "websecure"
+      traefik.http.routers.trust-infisical-api.tls: "true"
+      traefik.http.routers.trust-infisical-api.tls.certresolver: "letsencrypt"
+      traefik.http.routers.trust-infisical-api.service: "trust-infisical"
+      # Router Admin: resto de rutas (UI), restringido por IP allowlist
+      traefik.http.routers.trust-infisical-admin.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.trust-infisical-admin.entrypoints: "websecure"
+      traefik.http.routers.trust-infisical-admin.tls: "true"
+      traefik.http.routers.trust-infisical-admin.tls.certresolver: "letsencrypt"
+      traefik.http.routers.trust-infisical-admin.middlewares: "trust-infisical-admin-allowlist@docker"
+      traefik.http.routers.trust-infisical-admin.service: "trust-infisical"
       traefik.http.services.trust-infisical.loadbalancer.server.port: "${BACKEND_INTERNAL_PORT}"
